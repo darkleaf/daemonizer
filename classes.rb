@@ -1,14 +1,14 @@
 class BaseDaemon
-  attr_accessor :pid
+  attr_accessor :pid, :options
 
   def initialize(options = {})
-    @options = options
+    @options = options   
   end
   
   def started?
     return false unless @pid
 
-    Process.getpgid( @pid )
+    Process.getpgid @pid
     true
   rescue Errno::ESRCH
     false
@@ -24,13 +24,12 @@ class BaseDaemon
     end
   end
   
-  def run(do_exit = true)
+  def run
     return if started?
     @started = true
     @pid = fork do
       @pid = Process.pid
 
-      #STDIN.reopen File.open("#{@pid}.stdin", 'w')
       STDOUT.reopen File.open("#{@pid}.stout", 'a')
       STDERR.reopen File.open("#{@pid}.stderr", 'a')
 
@@ -49,21 +48,22 @@ end
 
 class Supervisor < BaseDaemon
   attr_accessor :daemons
+  LOG_FILE = "supervisor.log"
 
   def initialize(options = {})
-    super
+    super options
     @daemons = []
   end
 
   def action
     @daemons.each do |daemon|
-      file_name = "supervisor.log"
       unless daemon.started?
         old_pid = daemon.pid
-        File.open file_name, 'a' do |f|
-          daemon.run false
+        File.open LOG_FILE, 'a' do |f|
+          daemon.run
+          f.write "damon name: #{daemon.options[:name] || 'Dmn'}\n"
           f.write "daemon died! pid: #{old_pid}\n"
-          f.write "daemon started! pid: #{daemon.pid}\n"
+          f.write "daemon started! pid: #{daemon.pid}\n\n"
         end
       end
     end
@@ -74,7 +74,7 @@ end
 
 class Daemon < BaseDaemon
   def action
-    exit!1 if rand(5) == 0
+    exit! 1 if rand(5) == 0
     sleep 3
   end
 end
