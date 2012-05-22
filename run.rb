@@ -1,4 +1,4 @@
-load 'test.rb'
+load 'classes.rb'
 
 s = Supervisor.new
 s.daemons << Daemon.new
